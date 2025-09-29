@@ -1,0 +1,93 @@
+#!/bin/bash
+
+# -------------------------
+# Repo Enabling Script
+# -------------------------
+
+# Declare repos (main, universe, etc.)
+declare -A REPOS=(
+    [1]="main"
+    [2]="universe"
+    [3]="multiverse"
+    [4]="restricted"
+    [5]="partner"
+)
+
+# Get the current Ubuntu release codename
+CODENAME=$(lsb_release -sc)
+
+# Define the repository URLs
+BASE_URL="http://archive.ubuntu.com/ubuntu"
+PARTNER_URL="http://archive.canonical.com/ubuntu"
+
+# Check currently enabled repositories
+echo "Checking enabled repositories..."
+
+# Fetch the list of enabled repos (case-insensitive check)
+enabled_repos=$(grep -i '^[^#].*deb ' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null)
+
+# Convert to lowercase for easier matching
+enabled_repos_lower=$(echo "$enabled_repos" | tr '[:upper:]' '[:lower:]')
+
+# Display available repos with their enabled/disabled status
+for i in "${!REPOS[@]}"; do
+    repo="${REPOS[$i]}"
+    if echo "$enabled_repos_lower" | grep -qw "$repo"; then
+        status="[ENABLED]"
+    else
+        status="[DISABLED]"
+    fi
+    echo "$i) $repo $status"
+done
+
+# Ask user for which repos to enable
+read -p "Enter the number(s) of the repo(s) you want to enable (space-separated, or none to skip): " -a repo_choices
+
+# Array to store repos to be enabled
+pkgrepos=()
+
+# Collect repos to enable
+for choice in "${repo_choices[@]}"; do
+    if [[ -n "${REPOS[$choice]}" ]]; then
+        repo="${REPOS[$choice]}"
+        if echo "$enabled_repos_lower" | grep -qw "$repo"; then
+            echo "Already enabled: $repo"
+        else
+            pkgrepos+=("$repo")
+        fi
+    else
+        echo "Skipping invalid choice: $choice"
+    fi
+done
+
+# Enable selected repos
+if [ ${#pkgrepos[@]} -gt 0 ]; then
+    echo "Enabling repositories: ${pkgrepos[*]}"
+    for r in "${pkgrepos[@]}"; do
+        if [ "$r" == "partner" ]; then
+            # Canonical Partner repository
+            echo "deb $PARTNER_URL $CODENAME partner" | sudo tee -a /etc/apt/sources.list
+        else
+            # Main repositories
+            echo "deb $BASE_URL $CODENAME $r" | sudo tee -a /etc/apt/sources.list
+        fi
+    done
+    # Update package list
+    echo "Updating package lists..."
+    sudo apt update
+else
+    echo "No repositories enabled. Exiting."
+fi
+
+
+
+
+
+
+
+
+sudo truncate -s 0 /etc/apt/sources.list
+
+
+cat /etc/apt/sources.list
+ls /etc/apt/sources.list.d/
