@@ -180,5 +180,12 @@ choose_directory "$KERNEL_DIR/"
 
 
 
+sudo nano enable_modules_interactive.sh
+
+sudo chmod +x enable_modules_interactive.sh 
+
+./enable_modules_interactive.sh
+
+
 
 
